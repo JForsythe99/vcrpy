@@ -24,19 +24,26 @@ def run_in_loop(fn):
     return asyncio.run(wrapper())
 
 
-def request(method, url, output="text", **kwargs):
+def request(method, url, output="text", session_kwargs=None, **request_kwargs):
     def run(loop):
-        return aiohttp_request(loop, method, url, output=output, **kwargs)
+        return aiohttp_request(
+            loop,
+            method,
+            url,
+            output=output,
+            session_kwargs=session_kwargs,
+            **request_kwargs,
+        )
 
     return run_in_loop(run)
 
 
-def get(url, output="text", **kwargs):
-    return request("GET", url, output=output, **kwargs)
+def get(url, output="text", session_kwargs=None, **request_kwargs):
+    return request("GET", url, output=output, session_kwargs=session_kwargs, **request_kwargs)
 
 
-def post(url, output="text", **kwargs):
-    return request("POST", url, output="text", **kwargs)
+def post(url, output="text", session_kwargs=None, **request_kwargs):
+    return request("POST", url, output="text", session_kwargs=session_kwargs, **request_kwargs)
 
 
 @pytest.mark.online

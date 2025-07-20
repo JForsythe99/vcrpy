@@ -4,9 +4,21 @@ import asyncio
 import aiohttp
 
 
-async def aiohttp_request(loop, method, url, output="text", encoding="utf-8", content_type=None, **kwargs):
-    async with aiohttp.ClientSession(loop=loop) as session:
-        response_ctx = session.request(method, url, **kwargs)
+async def aiohttp_request(
+    loop,
+    method,
+    url,
+    output="text",
+    encoding="utf-8",
+    content_type=None,
+    session_kwargs=None,
+    **request_kwargs,
+):
+    if session_kwargs is None:
+        session_kwargs = {}
+
+    async with aiohttp.ClientSession(loop=loop, **session_kwargs) as session:
+        response_ctx = session.request(method, url, **request_kwargs)
 
         response = await response_ctx.__aenter__()
         if output == "text":
