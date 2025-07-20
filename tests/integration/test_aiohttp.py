@@ -46,6 +46,11 @@ def post(url, output="text", session_kwargs=None, **request_kwargs):
     return request("POST", url, output="text", session_kwargs=session_kwargs, **request_kwargs)
 
 
+async def raise_for_status(response):
+    if response.status >= 400:
+        raise ValueError("vcrpy_raise_for_status_test_error")
+
+
 @pytest.mark.online
 def test_status(tmpdir, httpbin):
     url = httpbin.url
@@ -473,3 +478,78 @@ def test_filter_query_parameters(tmpdir, httpbin):
         cassette_content = f.read()
         assert "password" not in cassette_content
         assert "secret" not in cassette_content
+
+
+@pytest.mark.parametrize(
+    ("raise_for_status", "expected_exception", "expected_message_match"),
+    [
+        (
+            True,  # raise_for_status set to a bool
+            aiohttp.ClientResponseError,
+            "400",
+        ),
+        (
+            raise_for_status,  # raise_for_status set to a callable
+            ValueError,
+            "vcrpy_raise_for_status_test_error",
+        ),
+    ],
+)
+def test_raise_for_status_set_on_session(
+    tmpdir,
+    httpbin,
+    raise_for_status,
+    expected_exception,
+    expected_message_match,
+):
+    url = httpbin + "/status/400"
+    path = str(tmpdir.join("raise_for_status_set_on_session.yaml"))
+    session_kwargs = {"raise_for_status": raise_for_status}
+
+    with vcr.use_cassette(path) as cassette:
+        with pytest.raises(expected_exception, match=expected_message_match):
+            get(url, session_kwargs=session_kwargs)
+        assert len(cassette.requests) == 1
+        assert cassette.requests[0]["response"]["status"]["code"] == 400
+        assert cassette.play_count == 0
+
+        with pytest.raises(expected_exception, match=expected_message_match):
+            get(url, session_kwargs=session_kwargs)
+        assert cassette.play_count == 1
+
+
+@pytest.mark.parametrize(
+    ("raise_for_status", "expected_exception", "expected_message_match"),
+    [
+        (
+            True,  # raise_for_status set to a bool
+            aiohttp.ClientResponseError,
+            "400",
+        ),
+        (
+            raise_for_status,  # raise_for_status set to a callable
+            ValueError,
+            "vcrpy_raise_for_status_test_error",
+        ),
+    ],
+)
+def test_raise_for_status_set_on_request(
+    tmpdir,
+    httpbin,
+    raise_for_status,
+    expected_exception,
+    expected_message_match,
+):
+    url = httpbin + "/status/400"
+    path = str(tmpdir.join("raise_for_status_set_on_session.yaml"))
+
+    with vcr.use_cassette(path) as cassette:
+        with pytest.raises(expected_exception, match=expected_message_match):
+            get(url, raise_for_status=raise_for_status)
+        assert len(cassette.requests) == 1
+        assert cassette.requests[0]["response"]["status"]["code"] == 400
+        assert cassette.play_count == 0
+
+        with pytest.raises(expected_exception, match=expected_message_match):
+            get(url, raise_for_status=raise_for_status)
+        assert cassette.play_count == 1
