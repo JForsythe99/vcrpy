@@ -510,9 +510,10 @@ def test_raise_for_status_set_on_session(
         with pytest.raises(expected_exception, match=expected_message_match):
             get(url, session_kwargs=session_kwargs)
         assert len(cassette.requests) == 1
-        assert cassette.requests[0]["response"]["status"]["code"] == 400
+        assert cassette.responses[0]["status"]["code"] == 400
         assert cassette.play_count == 0
 
+    with vcr.use_cassette(path) as cassette:
         with pytest.raises(expected_exception, match=expected_message_match):
             get(url, session_kwargs=session_kwargs)
         assert cassette.play_count == 1
@@ -547,9 +548,10 @@ def test_raise_for_status_set_on_request(
         with pytest.raises(expected_exception, match=expected_message_match):
             get(url, raise_for_status=raise_for_status)
         assert len(cassette.requests) == 1
-        assert cassette.requests[0]["response"]["status"]["code"] == 400
+        assert cassette.responses[0]["status"]["code"] == 400
         assert cassette.play_count == 0
 
+    with vcr.use_cassette(path) as cassette:
         with pytest.raises(expected_exception, match=expected_message_match):
             get(url, raise_for_status=raise_for_status)
         assert cassette.play_count == 1

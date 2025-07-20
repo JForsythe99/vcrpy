@@ -259,6 +259,10 @@ def vcr_request(cassette, real_request):
         if cookie_header:
             headers[hdrs.COOKIE] = cookie_header
 
+        raise_for_status = kwargs.pop("raise_for_status", None)
+        if raise_for_status is None:
+            raise_for_status = self.raise_for_status
+
         vcr_request = Request(method, str(request_url), data, _serialize_headers(headers))
 
         if cassette.can_play_response_for(vcr_request):
@@ -267,15 +271,22 @@ def vcr_request(cassette, real_request):
             for redirect in response.history:
                 self._cookie_jar.update_cookies(redirect.cookies, redirect.url)
             self._cookie_jar.update_cookies(response.cookies, response.url)
-            return response
+        else:
+            if cassette.write_protected and cassette.filter_request(vcr_request):
+                raise CannotOverwriteExistingCassetteException(cassette=cassette, failed_request=vcr_request)
 
-        if cassette.write_protected and cassette.filter_request(vcr_request):
-            raise CannotOverwriteExistingCassetteException(cassette=cassette, failed_request=vcr_request)
+            log.info("%s not in cassette, sending to real server", vcr_request)
 
-        log.info("%s not in cassette, sending to real server", vcr_request)
+            response = await real_request(self, method, url, raise_for_status=False, **kwargs)
+            await record_responses(cassette, vcr_request, response)
 
-        response = await real_request(self, method, url, **kwargs)
-        await record_responses(cassette, vcr_request, response)
+        if raise_for_status is None:
+            pass
+        elif callable(raise_for_status):
+            await raise_for_status(response)
+        elif raise_for_status:
+            response.raise_for_status()
+
         return response
 
     return new_request
